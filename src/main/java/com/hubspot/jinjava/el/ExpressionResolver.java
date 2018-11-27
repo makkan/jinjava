@@ -66,7 +66,7 @@ public class ExpressionResolver {
     interpreter.getContext().addResolvedExpression(expression.trim());
 
     try {
-      String elExpression = EXPRESSION_START_TOKEN + expression.trim() + EXPRESSION_END_TOKEN;
+      String elExpression = EXPRESSION_START_TOKEN + formatExpression(expression.trim()) + EXPRESSION_END_TOKEN;
       ValueExpression valueExp = expressionFactory.createValueExpression(elContext, elExpression, Object.class);
       Object result = valueExp.getValue(elContext);
 
@@ -76,13 +76,13 @@ public class ExpressionResolver {
 
     } catch (PropertyNotFoundException e) {
       interpreter.addError(new TemplateError(ErrorType.WARNING, ErrorReason.UNKNOWN, ErrorItem.PROPERTY, e.getMessage(), "", interpreter.getLineNumber(), interpreter.getPosition(), e,
-          BasicTemplateErrorCategory.UNKNOWN, ImmutableMap.of("exception", e.getMessage())));
+                                             BasicTemplateErrorCategory.UNKNOWN, ImmutableMap.of("exception", e.getMessage())));
     } catch (TreeBuilderException e) {
       int position = interpreter.getPosition() + e.getPosition();
       // replacing the position in the string like this isn't great, but JUEL's parser does not allow passing in a starting position
       String errorMessage = StringUtils.substringAfter(e.getMessage(), "': ").replaceFirst("position [0-9]+", "position " + position);
       interpreter.addError(TemplateError.fromException(new TemplateSyntaxException(expression.substring(e.getPosition() - EXPRESSION_START_TOKEN.length()),
-          "Error parsing '" + expression + "': " + errorMessage, interpreter.getLineNumber(), position, e)));
+                                                                                   "Error parsing '" + expression + "': " + errorMessage, interpreter.getLineNumber(), position, e)));
     } catch (ELException e) {
       interpreter.addError(TemplateError.fromException(new TemplateSyntaxException(expression, e.getMessage(), interpreter.getLineNumber(), e)));
     } catch (DisabledException e) {
@@ -92,10 +92,14 @@ public class ExpressionResolver {
       throw e;
     } catch (Exception e) {
       interpreter.addError(TemplateError.fromException(new InterpretException(
-          String.format("Error resolving expression [%s]: " + getRootCauseMessage(e), expression), e, interpreter.getLineNumber(), interpreter.getPosition())));
+              String.format("Error resolving expression [%s]: " + getRootCauseMessage(e), expression), e, interpreter.getLineNumber(), interpreter.getPosition())));
     }
 
     return "";
+  }
+
+  private static String formatExpression(String expression) {
+    return expression.replace("var:", "").replace(":", " or ");
   }
 
   private void validateResult(Object result) {
